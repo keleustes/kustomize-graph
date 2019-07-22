@@ -83,7 +83,37 @@ func (k *kustomizationFileContext) GetFromDirectory(directoryPath string) (*Kust
 		return nil, errors.Wrapf(err, "Could not unmarshal yaml file %s", kustomizationFilePath)
 	}
 
+	err = k.Normalize(&kustomizationFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not convert by to 2.x format yaml file %s", kustomizationFilePath)
+	}
+
 	return &kustomizationFile, nil
+}
+
+func (k *kustomizationFileContext) Normalize(kustomizationFile *KustomizationFile) (error) {
+
+	if len(kustomizationFile.Bases) != 0 {
+		// Still using deprecated notation.
+		return nil
+	}
+
+	bases := []string{}
+	resources := []string{}
+	
+	for _, item := range kustomizationFile.Resources {
+		if filepath.Ext(item) != ".yaml" && filepath.Ext(item) != ".yml" {
+			bases = append(bases, item)
+		} else {
+			resources = append(resources, item)
+		}
+	}	
+
+	kustomizationFile.Bases = bases
+	kustomizationFile.Resources = resources
+
+	return nil
+
 }
 
 // GetMissingResources returns a collection of resources that exist in the directory
